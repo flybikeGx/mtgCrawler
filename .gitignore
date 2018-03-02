@@ -1,1 +1,4 @@
-~
+Cache
+*.txt
+!deck.txt
+target

@@ -62,58 +62,53 @@ public class Crawler {
         return ssfFactory;
     }
 
-    public String toCHS(String cardName) throws IOException {
-        String engName = cardName;
-        engName.replace("\\s+", "+");
-        engName.replace("'s", "%27s");
-        String url = String.format("http://magiccards.info/query?q=%s&v=card&s=cname", engName);
+    public String toCHS(String html, String cardName) throws IOException {
 
-        Request request = new Request.Builder()
-                .url(url).build();
-
-        Response response = client.newCall(request).execute();
-
-        String html = response.body().string();
-        String pattern = "(alt=\"Simplified Chinese\"[\\s\\S]*?\">)([\\u4e00-\\u9fa5]*)(</a><br>)";
-        // 创建 Pattern 对象
-        Pattern r = Pattern.compile(pattern);
-
-        // 现在创建 matcher 对象
-        Matcher m = r.matcher(html);
-        if (m.find( )) {
-            engName = m.group(2);
+        if(cardName.equals("Mountain")) {
+            return "山脉";
         }
-        return engName;
+        if(cardName.equals("Island")) {
+            return "海岛";
+        }
+        if(cardName.equals("Plains")) {
+            return "平原";
+        }
+        if(cardName.equals("Swamp")) {
+            return "沼泽";
+        }
+        if(cardName.equals("Forest")) {
+            return "树林";
+        }
+
+        return getInfo(html,cardName, CHS_NAME);
     }
 
-
-    public String getInfo(String cardName, String pattern) throws IOException {
+    public String getHTML(String cardName) throws IOException {
         String engName = cardName;
         engName = engName.replace(" ", "+").replace("’", "+");
         String url = String.format("http://magiccards.info/query?q=%s&v=card&s=cname", engName);
-//        System.out.println(url);
-        Request request = new Request.Builder()
-                .url(url).build();
 
-        Response response = client.newCall(request).execute();
-
-        String html = response.body().string();
-        // 创建 Pattern 对象
-        Pattern r = Pattern.compile(pattern);
-
-        // 现在创建 matcher 对象
-        Matcher m = r.matcher(html);
-        if (m.find( )) {
-            engName = m.group(1);
+        if (cardName.equals("山脉")) {
+            url = "https://magiccards.info/ust/en/215.html";
         }
-        return engName;
-    }
 
-    public void downloadPic(String cardName) throws IOException {
-        String engName = cardName;
-        engName = engName.replace(" ", "+").replace("’", "+");
-        String url = String.format("http://magiccards.info/query?q=%s&v=card&s=cname", engName);
-//        System.out.println(url);
+        if (cardName.equals("海岛")) {
+            url = "https://magiccards.info/ust/en/213.html";
+        }
+
+        if (cardName.equals("平原")) {
+            url = "https://magiccards.info/ust/en/212.html";
+        }
+
+        if (cardName.equals("沼泽")) {
+            url = "https://magiccards.info/ust/en/214.html";
+        }
+
+        if (cardName.equals("树林")) {
+            url = "https://magiccards.info/ust/en/216.html";
+        }
+
+
         Request request = new Request.Builder()
                 .url(url).build();
 
@@ -123,14 +118,47 @@ public class Crawler {
 
         Document document = Jsoup.parse(html);
 
+        String  title = document.getElementsByTag("title").get(0).text();
+
+        if (title.contains("(")){ return html;}
+
+        List<Element> links = document.getElementsByTag("a");
+        for (Element link : links) {
+            if (link.text().equals(cardName)) {
+                request = new Request.Builder().url("https://magiccards.info"+ link.attr("href")).build();
+                response = client.newCall(request).execute();
+                return response.body().string();
+            }
+        }
+
+        return "";
+    }
+
+
+    public String getInfo(String html, String cardName, String pattern) throws IOException {
+        // 创建 Pattern 对象
+        Pattern r = Pattern.compile(pattern);
+
+        // 现在创建 matcher 对象
+        Matcher m = r.matcher(html);
+        if (m.find( )) {
+            return m.group(1);
+        }
+        return cardName;
+    }
+
+    public void downloadPic(String html ,String cardName) throws IOException {
+
+        Document document = Jsoup.parse(html);
+
         List<Element> elements = document.getElementsByAttributeValue("height", "445");
 
         String path = elements.get(0).attr("src");
 
-        request = new Request.Builder().url("https://magiccards.info" + path).build();
+        Request request = new Request.Builder().url("https://magiccards.info" + path).build();
 
 
-        final File file = new File("~/mtgPicCache/" + cardName + ".full.jpg");
+        final File file = new File("Cache/" + cardName + ".full.jpg");
         file.getParentFile().mkdirs();
 
         client.newCall(request).enqueue(new Callback() {
@@ -168,4 +196,5 @@ public class Crawler {
         });
 
     }
+
 }
